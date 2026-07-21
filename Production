@@ -1,0 +1,37 @@
+
+
+├── package.json
+├── vercel.json
+├── docker-compose.yml
+├── .env.example
+├── README.md
+
+├── apps/
+│   ├── chatgpt-app/
+│   │   └── README.md
+│   │
+│   ├── web/
+│   │   └── README.md
+│   │
+│   ├── ios/
+│   │   └── README.md
+│   │
+│   └── android/
+│       └── README.md
+
+├── services/
+│   └── mcp-server/
+│       └── README.md
+
+├── packages/
+│   ├── game-engine/
+│   │   └── README.md
+│   │
+│   ├── ai-dealer/
+│   │   └── README.md
+│   │
+│   └── shared/
+│       └── README.md
+
+└── database/
+    └── README.md
