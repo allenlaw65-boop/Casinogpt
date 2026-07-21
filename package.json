@@ -1,0 +1,11 @@
+{
+  "name": "casinogpt",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": ["apps/*", "services/*", "packages/*"],
+  "scripts": {
+    "dev": "echo Configure development server",
+    "build": "echo Configure production build",
+    "test": "echo Configure tests"
+  }
+}
