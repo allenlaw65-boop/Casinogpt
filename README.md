@@ -1,2 +1,3 @@
-# Casinogpt
-ChatGPT built casino
+# Database
+
+Database schemas and migrations.
