@@ -1,6 +1,186 @@
 workflows:
-  casino-gpt-node-docker:
-    name: CasinoGPT Node + Docker CI
+  casino-gpt-expo-ci:
+    name: CasinoGPT Expo CI
+    instance_type: linux
+    max_build_duration: 30
+    triggering:
+      events:
+        - push
+        - pull_request
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+        - pattern: develop
+          include: true
+          source: true
+        - pattern: Ughh
+          include: true
+          source: true
+    environment:
+      node: 20
+      vars:
+        NODE_ENV: production
+        EXPO_TOKEN: $EXPO_TOKEN
+    cache:
+      cache_paths:
+        - $HOME/.npm
+        - $CM_BUILD_DIR/node_modules
+    scripts:
+      - name: Install workspace dependencies
+        script: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Install Expo CLI
+        script: |
+          npm install -g expo-cli eas-cli
+
+      - name: Build workspace packages
+        script: |
+          npm run build --if-present
+
+      - name: Run tests
+        script: |
+          npm test --if-present
+
+      - name: Validate Expo configuration
+        script: |
+          cd apps/mobile
+          npx expo doctor
+
+      - name: Validate Docker Compose file
+        script: |
+          docker compose -f docker-compose.yml config
+
+      - name: Build Docker services
+        script: |
+          docker compose -f docker-compose.yml build
+
+    artifacts:
+      - build/**
+      - dist/**
+      - coverage/**
+
+  casino-gpt-expo-android-build:
+    name: CasinoGPT Expo Android Build
+    instance_type: linux
+    max_build_duration: 60
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+        - pattern: develop
+          include: true
+          source: true
+    environment:
+      node: 20
+      groups:
+        - expo_credentials  # Includes EXPO_TOKEN
+      vars:
+        NODE_ENV: production
+        EXPO_TOKEN: $EXPO_TOKEN
+        EAS_BUILD_PROFILE: production
+    cache:
+      cache_paths:
+        - $HOME/.npm
+        - $CM_BUILD_DIR/node_modules
+    scripts:
+      - name: Install dependencies
+        script: |
+          npm ci
+
+      - name: Install EAS CLI
+        script: |
+          npm install -g eas-cli
+
+      - name: Build Android APK via EAS
+        script: |
+          cd apps/mobile
+          eas build --platform android --profile production --wait
+
+      - name: Download build artifact
+        script: |
+          cd apps/mobile
+          eas build:list --platform android --limit 1
+
+    artifacts:
+      - apps/mobile/build-*.apk
+
+    publishing:
+      email:
+        recipients:
+          - allenlaw65@gmail.com
+        notify:
+          success: true
+          failure: true
+
+  casino-gpt-expo-ios-build:
+    name: CasinoGPT Expo iOS Build
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+        - pattern: develop
+          include: true
+          source: true
+    environment:
+      node: 20
+      xcode: latest
+      cocoapods: default
+      groups:
+        - expo_credentials  # Includes EXPO_TOKEN, APPLE_CREDENTIALS
+      vars:
+        NODE_ENV: production
+        EXPO_TOKEN: $EXPO_TOKEN
+        EAS_BUILD_PROFILE: production
+    cache:
+      cache_paths:
+        - $HOME/.npm
+        - $CM_BUILD_DIR/node_modules
+    scripts:
+      - name: Install dependencies
+        script: |
+          npm ci
+
+      - name: Install EAS CLI
+        script: |
+          npm install -g eas-cli
+
+      - name: Build iOS IPA via EAS
+        script: |
+          cd apps/mobile
+          eas build --platform ios --profile production --wait
+
+      - name: Download build artifact
+        script: |
+          cd apps/mobile
+          eas build:list --platform ios --limit 1
+
+    artifacts:
+      - apps/mobile/build-*.ipa
+
+    publishing:
+      email:
+        recipients:
+          - allenlaw65@gmail.com
+        notify:
+          success: true
+          failure: true
+
+  casino-gpt-expo-web-build:
+    name: CasinoGPT Expo Web Build
     instance_type: linux
     max_build_duration: 30
     triggering:
@@ -26,111 +206,22 @@ workflows:
         - $HOME/.npm
         - $CM_BUILD_DIR/node_modules
     scripts:
-      - name: Install workspace dependencies
+      - name: Install dependencies
         script: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
+          npm ci
 
-      - name: Build workspace packages
+      - name: Build web app
         script: |
-          npm run build --if-present
+          cd apps/mobile
+          npx expo export --platform web
 
-      - name: Run tests
-        script: |
-          npm test --if-present
-
-      - name: Validate Docker Compose file
-        script: |
-          docker compose -f docker-compose.yml config
-
-      - name: Build Docker services
-        script: |
-          docker compose -f docker-compose.yml build
     artifacts:
-      - build/**
-      - dist/**
-      - coverage/**
+      - apps/mobile/dist/**
 
-  casino-gpt-android:
-    name: CasinoGPT Android Release
-    instance_type: linux
-    max_build_duration: 45
-    triggering:
-      events:
-        - push
-        - pull_request
-      branch_patterns:
-        - pattern: main
-          include: true
-          source: true
-        - pattern: develop
-          include: true
-          source: true
-        - pattern: Ughh
-          include: true
-          source: true
-    environment:
-      java: 17
-      android_signing:
-        - casino_gpt_keystore
-      vars:
-        PACKAGE_NAME: com.casinogpt.app
-    scripts:
-      - name: Accept Android SDK licenses
-        script: |
-          yes | sdkmanager --licenses || true
-
-      - name: Build Android release APK/AAB
-        script: |
-          cd apps/android
-          ./gradlew assembleRelease
-    artifacts:
-      - apps/android/app/build/outputs/**/*.apk
-      - apps/android/app/build/outputs/**/*.aab
-
-  casino-gpt-ios:
-    name: CasinoGPT iOS Release
-    instance_type: mac_mini_m2
-    max_build_duration: 60
-    triggering:
-      events:
-        - push
-        - pull_request
-      branch_patterns:
-        - pattern: main
-          include: true
-          source: true
-        - pattern: develop
-          include: true
-          source: true
-        - pattern: Ughh
-          include: true
-          source: true
-    environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.casinogpt.app
-      xcode: latest
-      cocoapods: default
-      vars:
-        XCODE_WORKSPACE: CasinoGPT.xcworkspace
-        XCODE_SCHEME: CasinoGPT
-    scripts:
-      - name: Install CocoaPods dependencies
-        script: |
-          cd apps/ios
-          pod install
-
-      - name: Set up code signing settings on Xcode project
-        script: |
-          xcode-project use-profiles
-
-      - name: Build iOS release archive
-        script: |
-          xcode-project build-ipa --workspace "$XCODE_WORKSPACE" --scheme "$XCODE_SCHEME"
-    artifacts:
-      - apps/ios/build/ios/ipa/*.ipa
-      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      email:
+        recipients:
+          - allenlaw65@gmail.com
+        notify:
+          success: true
+          failure: true
