@@ -16,8 +16,6 @@ workflows:
           source: true
     environment:
       node: 20
-      groups:
-        - vercel_credentials
     cache:
       cache_paths:
         - $HOME/.npm
@@ -25,7 +23,11 @@ workflows:
     scripts:
       - name: Install workspace dependencies
         script: |
-          npm install
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
 
       - name: Build project
         script: |
@@ -35,32 +37,31 @@ workflows:
         script: |
           npm test --if-present
 
-      - name: Optional Vercel deploy
+      - name: Validate Docker Compose configuration
         script: |
-          if [ -n "$VERCEL_TOKEN" ]; then
-            npx vercel deploy --prod --token "$VERCEL_TOKEN" --yes
+          if [ -f docker-compose.yml ]; then
+            docker compose -f docker-compose.yml config --quiet
           else
-            echo "VERCEL_TOKEN not set; skipping Vercel deploy."
+            echo "No docker-compose.yml found; skipping Compose validation."
           fi
 
-      - name: Optional Docker build
+      - name: Build Docker services
         script: |
-          if [ -f Dockerfile ]; then
-            docker build -t casinogpt:${CM_BUILD_ID} .
+          if [ -f docker-compose.yml ]; then
+            docker compose -f docker-compose.yml build
           else
-            echo "No Dockerfile found; skipping Docker build."
+            echo "No docker-compose.yml found; skipping Docker build."
           fi
+
+    artifacts:
+      - build/**
+      - dist/**
+      - coverage/**
 
     publishing:
       email:
         recipients:
-          - allenlaw65.boop@example.com
-        notify:
-          success: true
-          failure: true
-      slack:
-        channel: "#casinogpt-builds"
-        notify_on_build_start: true
+          - allenlaw65@gmail.com
         notify:
           success: true
           failure: true
