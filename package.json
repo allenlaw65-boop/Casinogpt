@@ -2,10 +2,16 @@
   "name": "casinogpt",
   "version": "1.0.0",
   "private": true,
-  "workspaces": ["apps/*", "services/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "echo Configure development server",
-    "build": "echo Configure production build",
-    "test": "echo Configure tests"
+    "dev": "npm --workspace apps/mobile run start",
+    "build": "npm --workspace apps/mobile run build:web && npm --workspace services/mcp-server run build",
+    "test": "npm --workspace apps/mobile run test -- --passWithNoTests && npm --workspace services/mcp-server run test -- --passWithNoTests",
+    "lint": "npm --workspace apps/mobile run lint",
+    "type-check": "npm --workspace apps/mobile run type-check"
   }
 }
