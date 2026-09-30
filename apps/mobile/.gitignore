@@ -1,0 +1,14 @@
+node_modules/
+.expo/
+.expo-shared/
+dist/
+.env
+.env.local
+*.ipa
+*.apk
+.DS_Store
+*.jks
+*.p8
+*.pem
+.vscode/
+.idea/
